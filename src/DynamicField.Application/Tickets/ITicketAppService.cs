@@ -10,6 +10,6 @@ namespace DynamicField.Tickets
     {
         Task<bool> CreateTicket(CreateTicketReq res);
 
-        Task<GetTicketsRes> GetTickets(int skip, int take);
+        Task<GetTicketsRes> GetTickets(GetTicketsReq req);
     }
 }

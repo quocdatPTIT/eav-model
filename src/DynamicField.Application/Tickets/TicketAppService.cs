@@ -13,6 +13,7 @@ using DynamicField.TicketModel;
 using DynamicField.Tickets.Interfaces;
 using DynamicField.Tickets.Models.Request;
 using DynamicField.Tickets.Models.Response;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 
@@ -84,54 +85,45 @@ namespace DynamicField.Tickets
             return await Task.FromResult(true);
         }
 
-        public async Task<GetTicketsRes> GetTickets(int skip, int take)
+        [HttpPost]
+        public async Task<GetTicketsRes> GetTickets(GetTicketsReq req)
         {
             GetTicketsRes response = new GetTicketsRes();
             var optionTypes = new List<string> {"DROPDOWN", "MULTISELECT", "CHECKBOX"};
             using (var connection = GetConnection())
             {
-                List<int> paginationTicketIds;
-                const string countTicketAndAttributesSql = @"
-                    SELECT t.Id
-                    FROM Tickets AS t
-                    LEFT JOIN TicketDateTimeValues AS timeValue ON t.Id = timeValue.TicketId
-                    LEFT JOIN TicketDecimalValues AS decimalValue ON t.Id = decimalValue.TicketId
-                    LEFT JOIN TicketIntValues AS intValue ON t.Id = intValue.TicketId
-                    LEFT JOIN TicketTextValues AS textValue ON t.Id = textValue.TicketId
-                    LEFT JOIN TicketVarcharValues AS varcharValue ON t.Id = varcharValue.TicketId
-                    GROUP BY t.Id ORDER BY t.Id DESC
-                               
-                    SELECT Id, AttributeCode, BackendType, FrontEndLabel FROM EavAttributes WHERE EavEntityTypeId = 1
-                ";
+                // ---------------------------------------------------
+                // Count total ticket
+                const string countTicketSql = @"SELECT t.Id FROM Tickets AS t ORDER BY t.Id DESC";
+                var totalTicketIds = await connection.QueryAsync<int>(countTicketSql);
+                response.Total = totalTicketIds.Count();
+                var paginationTicketIds = totalTicketIds.Skip(req.Skip).Take(req.Take).ToList();
 
-                Dictionary<int, AttributeTicket> attributes;
-                Dictionary<int, OptionValueReq> optionValues;
-                using (var multi = await connection.QueryMultipleAsync(countTicketAndAttributesSql))
-                {
-                    var totalTicketIds = await multi.ReadAsync<int>();
-                    response.Total = totalTicketIds.Count();
 
-                    paginationTicketIds = totalTicketIds.Skip(skip).Take(take).ToList();
+                // ---------------------------------------------------
+                // Get attributes
+                const string getAttributesSql =
+                    @"SELECT Id, AttributeCode, BackendType, FrontEndLabel FROM EavAttributes WHERE EavEntityTypeId = 1";
 
-                    // -- Get attributes ---
-                    var attributesFromRepo = await multi.ReadAsync<AttributeTicket>();
+                var attributesFromRepo = await connection.QueryAsync<AttributeTicket>(getAttributesSql);
+                var attributeIds = attributesFromRepo.Where(a => optionTypes.Contains(a.BackendType))
+                    .Select(a => a.Id).ToList();
 
-                    var attributeIds = attributesFromRepo.Where(a => optionTypes.Contains(a.BackendType))
-                        .Select(a => a.Id).ToList();
-
-                    attributes = attributesFromRepo.ToDictionary(a => a.Id);
-
-                    var optionValuesSql = @"
+                var attributes = attributesFromRepo.ToDictionary(a => a.Id);
+                
+                // ---------------------------------------------------
+                // Get options
+                const string optionValuesSql = @"
                         SELECT EAOV.Id, EAOV.Value FROM EavAttributeOptionValues EAOV
                         INNER JOIN EavAttributeOptions EAO ON EAO.Id = EAOV.AttributeOptionId
                         WHERE EAO.AttributeId IN @attributeIds
                     ";
 
-                    optionValues =(await connection.QueryAsync<OptionValueReq>(optionValuesSql, new {attributeIds}))
-                        .ToDictionary(v => v.Id);
-                }
-
+                var optionValues = (await connection.QueryAsync<OptionValueReq>(optionValuesSql, new {attributeIds}))
+                    .ToDictionary(v => v.Id);
+                
                 // ---------------------------------------------------
+                // Mapping value
                 const string getTicketsSql = @"
                     SELECT Id, TenantId, Title, Status, CreationTime FROM Tickets WHERE Id IN @ticketIds
                     SELECT Id, TicketId, Value, AttributeId FROM TicketDateTimeValues WHERE TicketId IN @ticketIds
