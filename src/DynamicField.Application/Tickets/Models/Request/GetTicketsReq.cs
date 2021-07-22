@@ -7,7 +7,7 @@ namespace DynamicField.Tickets.Models.Request
     {
         public int Skip { get; set; }
         public int Take { get; set; }
-        public List<FilterValues<DateTime>> DateTimeFilters { get; set; }
+        public List<FilterValues<string>> DateTimeFilters { get; set; }
         public List<FilterValues<decimal>> DecimalFilters { get; set; }
         public List<FilterValues<int>> IntFilters { get; set; }
         public List<FilterValues<string>> VarcharFilters { get; set; }

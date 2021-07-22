@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Abp.Domain.Repositories;
 using Abp.EntityFrameworkCore.Uow;
@@ -94,8 +95,111 @@ namespace DynamicField.Tickets
             {
                 // ---------------------------------------------------
                 // Count total ticket
-                const string countTicketSql = @"SELECT t.Id FROM Tickets AS t ORDER BY t.Id DESC";
-                var totalTicketIds = await connection.QueryAsync<int>(countTicketSql);
+                var countTicketSql = new StringBuilder("");
+                if (req.DecimalFilters is null && req.IntFilters is null &&
+                    req.TextFilters is null && req.VarcharFilters is null &&
+                    req.DateTimeFilters is null)
+                {
+                    countTicketSql.Append("SELECT t.Id FROM Tickets AS t ORDER BY t.Id DESC");
+                }
+                else
+                {
+                    countTicketSql.Append("SELECT T.Id FROM Tickets as T ");
+                    if (req.DateTimeFilters is not null)
+                    {
+                        for (int i = 0; i < req.DateTimeFilters.Count; i++)
+                        {
+                            var filter = req.DateTimeFilters[i];
+                            countTicketSql.Append($"LEFT JOIN TicketDateTimeValues AS TDDV_{i} ON T.Id = TDDV_{i}.TicketId AND TDDV_{i}.AttributeId = {filter.AttributeId} ");
+                        }
+                    }
+
+                    if (req.DecimalFilters is not null)
+                    {
+                        for (int i = 0; i < req.DecimalFilters.Count; i++)
+                        {
+                            var filter = req.DecimalFilters[i];
+                            countTicketSql.Append($"LEFT JOIN TicketDecimalValues AS TCV_{i} ON T.Id = TCV_{i}.TicketId AND TCV_{i}.AttributeId = {filter.AttributeId} ");
+                        }
+                    }
+                    
+                    if (req.IntFilters is not null)
+                    {
+                        for (int i = 0; i < req.IntFilters.Count; i++)
+                        {
+                            var filter = req.IntFilters[i];
+                            countTicketSql.Append($"LEFT JOIN TicketIntValues AS TIN_{i} ON T.Id = TIN_{i}.TicketId AND TIN_{i}.AttributeId = {filter.AttributeId} ");
+                        }
+                    }
+                    
+                    if (req.VarcharFilters is not null)
+                    {
+                        for (int i = 0; i < req.VarcharFilters.Count; i++)
+                        {
+                            var filter = req.VarcharFilters[i];
+                            countTicketSql.Append($"LEFT JOIN TicketVarcharValues AS TVV_{i} ON T.Id = TVV_{i}.TicketId AND TVV_{i}.AttributeId = {filter.AttributeId} ");
+                        }
+                    }
+                    
+                    if (req.TextFilters is not null)
+                    {
+                        for (int i = 0; i < req.TextFilters.Count; i++)
+                        {
+                            var filter = req.TextFilters[i];
+                            countTicketSql.Append($"LEFT JOIN TicketTextValues AS TTV_{i} ON T.Id = TTV_{i}.TicketId AND TTV_{i}.AttributeId = {filter.AttributeId} ");
+                        }
+                    }
+                    
+                    countTicketSql.Append("WHERE 1 = 1 AND ");
+                    if (req.DateTimeFilters is not null)
+                    {
+                        for (int i = 0; i < req.DateTimeFilters.Count; i++)
+                        {
+                            var filter = req.DateTimeFilters[i];
+                            countTicketSql.Append($"TDDV_{i}.Value > '{filter.Value}' AND ");
+                        }
+                    }
+                    
+                    if (req.DecimalFilters is not null)
+                    {
+                        for (int i = 0; i < req.DecimalFilters.Count; i++)
+                        {
+                            var filter = req.DecimalFilters[i];
+                            countTicketSql.Append($"TCV_{i}.Value = {filter.Value} AND ");
+                        }
+                    }
+                    
+                    if (req.IntFilters is not null)
+                    {
+                        for (int i = 0; i < req.IntFilters.Count; i++)
+                        {
+                            var filter = req.IntFilters[i];
+                            countTicketSql.Append($"TIN_{i}.Value = {filter.Value} AND ");
+                        }
+                    }
+                    
+                    if (req.VarcharFilters is not null)
+                    {
+                        for (int i = 0; i < req.VarcharFilters.Count; i++)
+                        {
+                            var filter = req.VarcharFilters[i];
+                            countTicketSql.Append($"TVV_{i}.Value LIKE N'{filter.Value}' AND ");
+                        }
+                    }
+                    
+                    if (req.TextFilters is not null)
+                    {
+                        for (int i = 0; i < req.TextFilters.Count; i++)
+                        {
+                            var filter = req.TextFilters[i];
+                            countTicketSql.Append($"TTV_{i}.Value LIKE N'{filter.Value}' AND ");
+                        }
+                    }
+
+                    countTicketSql.Remove(countTicketSql.Length - 4, 4);
+                    countTicketSql.Append("ORDER BY T.Id DESC");
+                }
+                var totalTicketIds = await connection.QueryAsync<int>(countTicketSql.ToString());
                 response.Total = totalTicketIds.Count();
                 var paginationTicketIds = totalTicketIds.Skip(req.Skip).Take(req.Take).ToList();
 
