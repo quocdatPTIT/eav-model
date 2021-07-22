@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -103,7 +102,10 @@ namespace DynamicField.Tickets
                     req.TextFilters is null && req.VarcharFilters is null &&
                     req.DateTimeFilters is null)
                 {
-                    countTicketSql.Append("SELECT t.Id FROM Tickets AS t ORDER BY t.Id DESC");
+                    countTicketSql.Append("SELECT t.Id FROM Tickets AS t ");
+                    if (!string.IsNullOrEmpty(req.Title))
+                        countTicketSql.Append($"WHERE t.Title LIKE N'%{req.Title}%' ");
+                    countTicketSql.Append("ORDER BY t.Id DESC");
                 }
                 else
                 {
@@ -136,6 +138,10 @@ namespace DynamicField.Tickets
 
                     // --- where ---
                     countTicketSql.Append("WHERE 1 = 1 AND ");
+                    
+                    if (!string.IsNullOrEmpty(req.Title))
+                        countTicketSql.Append($"T.Title LIKE N'%{req.Title}%' AND ");
+                    
                     if (req.DateTimeFilters is not null)
                     {
                         for (int i = 0; i < req.DateTimeFilters.Filters.Count; i++)
