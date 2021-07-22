@@ -7,17 +7,23 @@ namespace DynamicField.Tickets.Models.Request
     {
         public int Skip { get; set; }
         public int Take { get; set; }
-        public List<FilterValues<string>> DateTimeFilters { get; set; }
-        public List<FilterValues<decimal>> DecimalFilters { get; set; }
-        public List<FilterValues<int>> IntFilters { get; set; }
-        public List<FilterValues<string>> VarcharFilters { get; set; }
-        public List<FilterValues<string>> TextFilters { get; set; }
+        public TicketFilter<DateTime> DateTimeFilters { get; set; }
+        public TicketFilter<decimal> DecimalFilters { get; set; }
+        public TicketFilter<int> IntFilters { get; set; }
+        public TicketFilter<string> VarcharFilters { get; set; }
+        public TicketFilter<string> TextFilters { get; set; }
     }
 
     public class FilterValues<T>
     {
-        public string BackendType { get; set; }
+        public string OptionType { get; set; }
         public int AttributeId { get; set; }
         public T Value { get; set; }
+    }
+
+    public class TicketFilter<T>
+    {
+        public string BackendType { get; set; }
+        public List<FilterValues<T>> Filters { get; set; }
     }
 }

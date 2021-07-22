@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -91,6 +92,7 @@ namespace DynamicField.Tickets
         {
             GetTicketsRes response = new GetTicketsRes();
             var optionTypes = new List<string> {"DROPDOWN", "MULTISELECT", "CHECKBOX"};
+            List<Dictionary<string, object>> res = new List<Dictionary<string, object>>();
             using (var connection = GetConnection())
             {
                 // ---------------------------------------------------
@@ -104,104 +106,99 @@ namespace DynamicField.Tickets
                 }
                 else
                 {
+                    // --- Left join ---
                     countTicketSql.Append("SELECT T.Id FROM Tickets as T ");
                     if (req.DateTimeFilters is not null)
+                        AppentLeftJoin(ref countTicketSql, req.DateTimeFilters.Filters,
+                            $"Ticket{req.DateTimeFilters.BackendType}Values",
+                            $"{req.DateTimeFilters.BackendType}");
+
+                    if (req.DecimalFilters is not null)
+                        AppentLeftJoin(ref countTicketSql, req.DecimalFilters.Filters,
+                            $"Ticket{req.DecimalFilters.BackendType}Values",
+                            $"{req.DecimalFilters.BackendType}");
+
+                    if (req.IntFilters is not null)
+                        AppentLeftJoin(ref countTicketSql, req.IntFilters.Filters,
+                            $"Ticket{req.DecimalFilters.BackendType}Values",
+                            $"{req.DecimalFilters.BackendType}");
+
+                    if (req.VarcharFilters is not null)
+                        AppentLeftJoin(ref countTicketSql, req.VarcharFilters.Filters,
+                            $"Ticket{req.VarcharFilters.BackendType}Values",
+                            $"{req.VarcharFilters.BackendType}");
+
+                    if (req.TextFilters is not null)
+                        AppentLeftJoin(ref countTicketSql, req.TextFilters.Filters,
+                            $"Ticket{req.TextFilters.BackendType}Values",
+                            $"{req.TextFilters.BackendType}");
+
+                    // --- where ---
+                    countTicketSql.Append("WHERE 1 = 1 AND ");
+                    if (req.DateTimeFilters is not null)
                     {
-                        for (int i = 0; i < req.DateTimeFilters.Count; i++)
+                        for (int i = 0; i < req.DateTimeFilters.Filters.Count; i++)
                         {
-                            var filter = req.DateTimeFilters[i];
-                            countTicketSql.Append($"LEFT JOIN TicketDateTimeValues AS TDDV_{i} ON T.Id = TDDV_{i}.TicketId AND TDDV_{i}.AttributeId = {filter.AttributeId} ");
+                            var filter = req.DateTimeFilters.Filters[i];
+                            countTicketSql.Append(
+                                $"{req.DateTimeFilters.BackendType}_{i}.Value > '{filter.Value}' AND ");
                         }
                     }
 
                     if (req.DecimalFilters is not null)
                     {
-                        for (int i = 0; i < req.DecimalFilters.Count; i++)
+                        for (int i = 0; i < req.DecimalFilters.Filters.Count; i++)
                         {
-                            var filter = req.DecimalFilters[i];
-                            countTicketSql.Append($"LEFT JOIN TicketDecimalValues AS TCV_{i} ON T.Id = TCV_{i}.TicketId AND TCV_{i}.AttributeId = {filter.AttributeId} ");
+                            var filter = req.DecimalFilters.Filters[i];
+                            countTicketSql.Append($"{req.DecimalFilters.BackendType}_{i}.Value = {filter.Value} AND ");
                         }
                     }
-                    
+
                     if (req.IntFilters is not null)
                     {
-                        for (int i = 0; i < req.IntFilters.Count; i++)
+                        for (int i = 0; i < req.IntFilters.Filters.Count; i++)
                         {
-                            var filter = req.IntFilters[i];
-                            countTicketSql.Append($"LEFT JOIN TicketIntValues AS TIN_{i} ON T.Id = TIN_{i}.TicketId AND TIN_{i}.AttributeId = {filter.AttributeId} ");
+                            var filter = req.IntFilters.Filters[i];
+                            countTicketSql.Append($"{req.DecimalFilters.BackendType}_{i}.Value = {filter.Value} AND ");
                         }
                     }
-                    
+
                     if (req.VarcharFilters is not null)
                     {
-                        for (int i = 0; i < req.VarcharFilters.Count; i++)
+                        for (int i = 0; i < req.VarcharFilters.Filters.Count; i++)
                         {
-                            var filter = req.VarcharFilters[i];
-                            countTicketSql.Append($"LEFT JOIN TicketVarcharValues AS TVV_{i} ON T.Id = TVV_{i}.TicketId AND TVV_{i}.AttributeId = {filter.AttributeId} ");
+                            var filter = req.VarcharFilters.Filters[i];
+                            switch (filter.OptionType)
+                            {
+                                case "MULTISELECT":
+                                    countTicketSql.Append(
+                                        $"{req.VarcharFilters.BackendType}_{i}.Value = '{filter.Value}' AND ");
+                                    break;
+                                default:
+                                    countTicketSql.Append(
+                                        $"{req.VarcharFilters.BackendType}_{i}.Value LIKE '{filter.Value}' AND ");
+                                    break;
+                            }
                         }
                     }
-                    
+
                     if (req.TextFilters is not null)
                     {
-                        for (int i = 0; i < req.TextFilters.Count; i++)
+                        for (int i = 0; i < req.TextFilters.Filters.Count; i++)
                         {
-                            var filter = req.TextFilters[i];
-                            countTicketSql.Append($"LEFT JOIN TicketTextValues AS TTV_{i} ON T.Id = TTV_{i}.TicketId AND TTV_{i}.AttributeId = {filter.AttributeId} ");
-                        }
-                    }
-                    
-                    countTicketSql.Append("WHERE 1 = 1 AND ");
-                    if (req.DateTimeFilters is not null)
-                    {
-                        for (int i = 0; i < req.DateTimeFilters.Count; i++)
-                        {
-                            var filter = req.DateTimeFilters[i];
-                            countTicketSql.Append($"TDDV_{i}.Value > '{filter.Value}' AND ");
-                        }
-                    }
-                    
-                    if (req.DecimalFilters is not null)
-                    {
-                        for (int i = 0; i < req.DecimalFilters.Count; i++)
-                        {
-                            var filter = req.DecimalFilters[i];
-                            countTicketSql.Append($"TCV_{i}.Value = {filter.Value} AND ");
-                        }
-                    }
-                    
-                    if (req.IntFilters is not null)
-                    {
-                        for (int i = 0; i < req.IntFilters.Count; i++)
-                        {
-                            var filter = req.IntFilters[i];
-                            countTicketSql.Append($"TIN_{i}.Value = {filter.Value} AND ");
-                        }
-                    }
-                    
-                    if (req.VarcharFilters is not null)
-                    {
-                        for (int i = 0; i < req.VarcharFilters.Count; i++)
-                        {
-                            var filter = req.VarcharFilters[i];
-                            countTicketSql.Append($"TVV_{i}.Value LIKE N'{filter.Value}' AND ");
-                        }
-                    }
-                    
-                    if (req.TextFilters is not null)
-                    {
-                        for (int i = 0; i < req.TextFilters.Count; i++)
-                        {
-                            var filter = req.TextFilters[i];
-                            countTicketSql.Append($"TTV_{i}.Value LIKE N'{filter.Value}' AND ");
+                            var filter = req.TextFilters.Filters[i];
+                            countTicketSql.Append(
+                                $"{req.TextFilters.BackendType}_{i}.Value LIKE N'{filter.Value}' AND ");
                         }
                     }
 
                     countTicketSql.Remove(countTicketSql.Length - 4, 4);
                     countTicketSql.Append("ORDER BY T.Id DESC");
                 }
+
                 var totalTicketIds = await connection.QueryAsync<int>(countTicketSql.ToString());
                 response.Total = totalTicketIds.Count();
-                var paginationTicketIds = totalTicketIds.Skip(req.Skip).Take(req.Take).ToList();
+                var paginationTicketIds = totalTicketIds.Skip(req.Skip).Take(req.Take);
 
 
                 // ---------------------------------------------------
@@ -214,7 +211,7 @@ namespace DynamicField.Tickets
                     .Select(a => a.Id).ToList();
 
                 var attributes = attributesFromRepo.ToDictionary(a => a.Id);
-                
+
                 // ---------------------------------------------------
                 // Get options
                 const string optionValuesSql = @"
@@ -225,9 +222,9 @@ namespace DynamicField.Tickets
 
                 var optionValues = (await connection.QueryAsync<OptionValueReq>(optionValuesSql, new {attributeIds}))
                     .ToDictionary(v => v.Id);
-                
+
                 // ---------------------------------------------------
-                // Mapping value
+                // Mapping value from database
                 const string getTicketsSql = @"
                     SELECT Id, TenantId, Title, Status, CreationTime FROM Tickets WHERE Id IN @ticketIds
                     SELECT Id, TicketId, Value, AttributeId FROM TicketDateTimeValues WHERE TicketId IN @ticketIds
@@ -257,7 +254,8 @@ namespace DynamicField.Tickets
 
                     // --- Get text value ---
                     var textValues = await multi.ReadAsync<TicketValue<string>>();
-                    var textDictionary = ConvertToDictionary<ITicketValue<string>, string>(textValues, attributes, optionValues);
+                    var textDictionary =
+                        ConvertToDictionary<ITicketValue<string>, string>(textValues, attributes, optionValues);
                     MappingValues(ref tickets, textDictionary, Constants.TicketValueType.TEXT);
 
                     // --- Get decimal value ---
@@ -268,14 +266,89 @@ namespace DynamicField.Tickets
 
                     // --- Get int value ---
                     var intValues = await multi.ReadAsync<TicketValue<int>>();
-                    var intDictionary = ConvertToDictionary<ITicketValue<int>, int>(intValues, attributes, optionValues);
+                    var intDictionary =
+                        ConvertToDictionary<ITicketValue<int>, int>(intValues, attributes, optionValues);
                     MappingValues(ref tickets, intDictionary, Constants.TicketValueType.INT);
 
-                    response.Tickets = tickets;
+                    // --- Flat object ---
+                    foreach (var item in tickets)
+                    {
+                        var dict = new Dictionary<string, object>
+                        {
+                            ["Id"] = item.Id, ["Status"] = item.Status, ["Title"] = item.Title
+                        };
+
+                        if (item.TicketDateTimeValues is not null)
+                        {
+                            foreach (var value in item.TicketDateTimeValues)
+                            {
+                                dict[value.Attribute.AttributeCode] = value.Value;
+                            }
+                        }
+
+                        if (item.TicketIntValues is not null)
+                        {
+                            foreach (var value in item.TicketIntValues)
+                            {
+                                dict[value.Attribute.AttributeCode] = value.Value;
+                            }
+                        }
+
+                        if (item.TicketDecimalValues is not null)
+                        {
+                            foreach (var value in item.TicketDecimalValues)
+                            {
+                                dict[value.Attribute.AttributeCode] = value.Value;
+                            }
+                        }
+
+                        if (item.TicketTextValues is not null)
+                        {
+                            foreach (var value in item.TicketTextValues)
+                            {
+                                dict[value.Attribute.AttributeCode] = value.Value;
+                            }
+                        }
+
+                        if (item.TicketVarcharValues is not null)
+                        {
+                            foreach (var value in item.TicketVarcharValues)
+                            {
+                                if (value.Attribute.BackendType == "DROPDOWN")
+                                {
+                                    dict[value.Attribute.AttributeCode] = value.Attribute.SingleSelectValue.Value;
+                                }
+                                else if (value.Attribute.BackendType == "MULTISELECT")
+                                {
+                                    var multiValues = string.Join(", ",
+                                        value.Attribute.MultiSelectValue.Select(v => v.Value));
+                                    dict[value.Attribute.AttributeCode] = multiValues;
+                                }
+                                else
+                                {
+                                    dict[value.Attribute.AttributeCode] = value.Value;
+                                }
+                            }
+                        }
+
+                        res.Add(dict);
+                    }
+
+                    response.Tickets = res;
                 }
             }
 
             return await Task.FromResult(response);
+        }
+
+        private void AppentLeftJoin<T>(ref StringBuilder sql, List<FilterValues<T>> filters, string table, string alias)
+        {
+            for (int i = 0; i < filters.Count; i++)
+            {
+                var filter = filters[i];
+                sql.Append(
+                    $"LEFT JOIN {table} AS {alias}_{i} ON T.Id = {alias}_{i}.TicketId AND {alias}_{i}.AttributeId = {filter.AttributeId} ");
+            }
         }
 
         private void MappingValues<T>(ref IEnumerable<TicketsRes> tickets,
@@ -327,7 +400,7 @@ namespace DynamicField.Tickets
                     {
                         var optionValueIds = value.Value.ToString().Split(',').ToList();
                         value.Attribute.MultiSelectValue = new List<OptionValueReq>();
-                        
+
                         optionValueIds.ForEach(id =>
                         {
                             var optionValueId = Convert.ToInt32(id);

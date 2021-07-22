@@ -10,7 +10,7 @@ namespace DynamicField.Tickets.Models.Response
     public class GetTicketsRes
     {
         public int Total { get; set; }
-        public IEnumerable<TicketsRes> Tickets { get; set; }
+        public List<Dictionary<string, object>> Tickets { get; set; }
     }
     
     public class TicketsRes
