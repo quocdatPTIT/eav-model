@@ -89,7 +89,7 @@ namespace DynamicField.Tickets
             var response = new GetAttributeTicketRes();
             using (var connection = await GetConnection())
             {
-                const string sql = @"SELECT Id, AttributeCode as ObjectProperty, BackendType, FrontEndLabel
+                const string sql = @"SELECT AttributeCode as Field, FrontEndLabel as Header
                                     FROM EavAttributes
                                     WHERE EavEntityTypeId = 1
                 ";
@@ -98,7 +98,7 @@ namespace DynamicField.Tickets
 
                 foreach (var item in attributesFromRepo)
                 {
-                    item.ObjectProperty = item.ObjectProperty.LowerFirstLetter();
+                    item.Field = item.Field.LowerFirstLetter();
                 }
                 
                 response.Attributes = attributesFromRepo;
