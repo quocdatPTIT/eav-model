@@ -1,17 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Threading.Tasks;
 using Abp.Domain.Repositories;
 using Abp.EntityFrameworkCore.Uow;
 using Abp.ObjectMapping;
+using Dapper;
 using DynamicField.EAV;
 using DynamicField.EntityFrameworkCore;
 using DynamicField.Tickets.Models.Request;
+using DynamicField.Tickets.Models.Response;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 
 namespace DynamicField.Tickets
 {
     public class EavTicketAppService : DynamicFieldAppServiceBase, IEavTicketAppService
     {
+        private readonly string _connectionString;
         private readonly IObjectMapper _objectMapper;
         private readonly IRepository<EavAttribute> _eavAttributeRepository;
         private readonly IRepository<EavEntityType> _eavEntityTypeRepository;
@@ -19,6 +26,7 @@ namespace DynamicField.Tickets
         private readonly IRepository<EavAttributeOptionValue> _eavAttributeOptionValueRepository;
 
         public EavTicketAppService(
+            IConfiguration configuration,
             IObjectMapper objectMapper,
             IRepository<EavAttribute> eavAttributeRepository,
             IRepository<EavEntityType> eavEntityTypeRepository,
@@ -30,6 +38,7 @@ namespace DynamicField.Tickets
             _eavEntityTypeRepository = eavEntityTypeRepository;
             _eavAttributeOptionRepository = eavAttributeOptionRepository;
             _eavAttributeOptionValueRepository = eavAttributeOptionValueRepository;
+            _connectionString = configuration.GetValue<string>("ConnectionStrings:Default");
         }
 
         public async Task<bool> CreateAttribute(CreateAttributeReq res)
@@ -71,6 +80,28 @@ namespace DynamicField.Tickets
             await dbContext.EavAttributeOptionValues.AddRangeAsync(optionValues);
             
             return await Task.FromResult(true);
+        }
+        
+        public async Task<GetAttributeTicketRes> GetAttributesTicket()
+        {
+            var response = new GetAttributeTicketRes();
+            using (var connection = await GetConnection())
+            {
+                const string sql = @"SELECT Id, AttributeCode, BackendType, FrontEndLabel FROM EavAttributes WHERE EavEntityTypeId = 1";
+
+                var attributesFromRepo = await connection.QueryAsync<AttributeTicketValue>(sql);
+
+                response.Attributes = attributesFromRepo;
+            }
+            return await Task.FromResult(response);
+        }
+        
+        private async Task<IDbConnection> GetConnection()
+        {
+            var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            return connection;
         }
     }
 }

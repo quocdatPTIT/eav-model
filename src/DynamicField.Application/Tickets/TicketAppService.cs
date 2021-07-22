@@ -86,7 +86,7 @@ namespace DynamicField.Tickets
                 await dbContext.TicketDateTimeValues.AddRangeAsync(ticketDateTimeValues);
             return await Task.FromResult(true);
         }
-
+        
         [HttpPost]
         public async Task<GetTicketsRes> GetTickets(GetTicketsReq req)
         {
