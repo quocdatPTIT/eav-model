@@ -11,6 +11,7 @@ using Abp.ObjectMapping;
 using Dapper;
 using DynamicField.Common;
 using DynamicField.EntityFrameworkCore;
+using DynamicField.ExtentionMethods;
 using DynamicField.TicketModel;
 using DynamicField.Tickets.Interfaces;
 using DynamicField.Tickets.Models.Request;
@@ -275,14 +276,14 @@ namespace DynamicField.Tickets
                     {
                         var dict = new Dictionary<string, object>
                         {
-                            ["Id"] = item.Id, ["Status"] = item.Status, ["Title"] = item.Title
+                            ["id"] = item.Id, ["status"] = item.Status, ["title"] = item.Title
                         };
 
                         if (item.TicketDateTimeValues is not null)
                         {
                             foreach (var value in item.TicketDateTimeValues)
                             {
-                                dict[value.Attribute.AttributeCode] = value.Value;
+                                dict[value.Attribute.AttributeCode.LowerFirstLetter()] = value.Value;
                             }
                         }
 
@@ -290,7 +291,7 @@ namespace DynamicField.Tickets
                         {
                             foreach (var value in item.TicketIntValues)
                             {
-                                dict[value.Attribute.AttributeCode] = value.Value;
+                                dict[value.Attribute.AttributeCode.LowerFirstLetter()] = value.Value;
                             }
                         }
 
@@ -298,7 +299,7 @@ namespace DynamicField.Tickets
                         {
                             foreach (var value in item.TicketDecimalValues)
                             {
-                                dict[value.Attribute.AttributeCode] = value.Value;
+                                dict[value.Attribute.AttributeCode.LowerFirstLetter()] = value.Value;
                             }
                         }
 
@@ -306,7 +307,7 @@ namespace DynamicField.Tickets
                         {
                             foreach (var value in item.TicketTextValues)
                             {
-                                dict[value.Attribute.AttributeCode] = value.Value;
+                                dict[value.Attribute.AttributeCode.LowerFirstLetter()] = value.Value;
                             }
                         }
 
@@ -316,17 +317,17 @@ namespace DynamicField.Tickets
                             {
                                 if (value.Attribute.BackendType == "DROPDOWN")
                                 {
-                                    dict[value.Attribute.AttributeCode] = value.Attribute.SingleSelectValue.Value;
+                                    dict[value.Attribute.AttributeCode.LowerFirstLetter()] = value.Attribute.SingleSelectValue.Value;
                                 }
                                 else if (value.Attribute.BackendType == "MULTISELECT")
                                 {
                                     var multiValues = string.Join(", ",
                                         value.Attribute.MultiSelectValue.Select(v => v.Value));
-                                    dict[value.Attribute.AttributeCode] = multiValues;
+                                    dict[value.Attribute.AttributeCode.LowerFirstLetter()] = multiValues;
                                 }
                                 else
                                 {
-                                    dict[value.Attribute.AttributeCode] = value.Value;
+                                    dict[value.Attribute.AttributeCode.LowerFirstLetter()] = value.Value;
                                 }
                             }
                         }
@@ -418,7 +419,7 @@ namespace DynamicField.Tickets
 
             return dict;
         }
-
+        
         private IDbConnection GetConnection()
         {
             var connection = new SqlConnection(_connectionString);

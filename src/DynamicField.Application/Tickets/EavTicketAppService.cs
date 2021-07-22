@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
 using Abp.Domain.Repositories;
 using Abp.EntityFrameworkCore.Uow;
@@ -8,6 +9,7 @@ using Abp.ObjectMapping;
 using Dapper;
 using DynamicField.EAV;
 using DynamicField.EntityFrameworkCore;
+using DynamicField.ExtentionMethods;
 using DynamicField.Tickets.Models.Request;
 using DynamicField.Tickets.Models.Response;
 using Microsoft.AspNetCore.Mvc;
@@ -87,10 +89,18 @@ namespace DynamicField.Tickets
             var response = new GetAttributeTicketRes();
             using (var connection = await GetConnection())
             {
-                const string sql = @"SELECT Id, AttributeCode, BackendType, FrontEndLabel FROM EavAttributes WHERE EavEntityTypeId = 1";
+                const string sql = @"SELECT Id, AttributeCode as ObjectProperty, BackendType, FrontEndLabel
+                                    FROM EavAttributes
+                                    WHERE EavEntityTypeId = 1
+                ";
 
                 var attributesFromRepo = await connection.QueryAsync<AttributeTicketValue>(sql);
 
+                foreach (var item in attributesFromRepo)
+                {
+                    item.ObjectProperty = item.ObjectProperty.LowerFirstLetter();
+                }
+                
                 response.Attributes = attributesFromRepo;
             }
             return await Task.FromResult(response);
