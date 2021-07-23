@@ -26,23 +26,14 @@ namespace DynamicField.Tickets
         private readonly string _connectionString;
         private readonly IObjectMapper _objectMapper;
         private readonly IRepository<Ticket> _ticketRepository;
-        private readonly IRepository<TicketDateTime> _ticketDateTimeRepository;
-        private readonly IRepository<TicketInt> _ticketIntRepository;
-        private readonly IRepository<TicketVarchar> _ticketVarcharRepository;
 
         public TicketAppService(
             IConfiguration configuration,
             IObjectMapper objectMapper,
-            IRepository<Ticket> ticketRepository,
-            IRepository<TicketDateTime> ticketDateTimeRepository,
-            IRepository<TicketInt> ticketIntRepository,
-            IRepository<TicketVarchar> ticketVarcharRepository)
+            IRepository<Ticket> ticketRepository)
         {
             _objectMapper = objectMapper;
             _ticketRepository = ticketRepository;
-            _ticketDateTimeRepository = ticketDateTimeRepository;
-            _ticketIntRepository = ticketIntRepository;
-            _ticketVarcharRepository = ticketVarcharRepository;
             _connectionString = configuration.GetValue<string>("ConnectionStrings:Default");
         }
 
@@ -123,8 +114,8 @@ namespace DynamicField.Tickets
 
                     if (req.IntFilters is not null)
                         AppentLeftJoin(ref countTicketSql, req.IntFilters.Filters,
-                            $"Ticket{req.DecimalFilters.BackendType}Values",
-                            $"{req.DecimalFilters.BackendType}");
+                            $"Ticket{req.DecimalFilters?.BackendType}Values",
+                            $"{req.DecimalFilters?.BackendType}");
 
                     if (req.VarcharFilters is not null)
                         AppentLeftJoin(ref countTicketSql, req.VarcharFilters.Filters,
@@ -203,8 +194,8 @@ namespace DynamicField.Tickets
                     countTicketSql.Append("ORDER BY T.Id DESC");
                 }
 
-                var totalTicketIds = await connection.QueryAsync<int>(countTicketSql.ToString());
-                response.Total = totalTicketIds.Count();
+                var totalTicketIds = (await connection.QueryAsync<int>(countTicketSql.ToString())).ToHashSet();
+                response.Total = totalTicketIds.Count;
                 var paginationTicketIds = totalTicketIds.Skip(req.Skip).Take(req.Take);
 
 
@@ -385,9 +376,9 @@ namespace DynamicField.Tickets
             }
         }
 
-        private Dictionary<int, HashSet<T>> ConvertToDictionary<T, U>(IEnumerable<T> values,
+        private Dictionary<int, HashSet<T>> ConvertToDictionary<T, TU>(IEnumerable<T> values,
             Dictionary<int, AttributeTicket> attrDictionary,
-            Dictionary<int, OptionValueReq> optionValueDictionary) where T : ITicketValue<U>
+            Dictionary<int, OptionValueReq> optionValueDictionary) where T : class, ITicketValue<TU>
         {
             var dict = new Dictionary<int, HashSet<T>>();
             List<string> singleType = new List<string> {"DROPDOWN", "CHECKBOX"};
@@ -405,10 +396,10 @@ namespace DynamicField.Tickets
                     }
                     else if (optionValueDictionary is not null && value.Attribute.BackendType == "MULTISELECT")
                     {
-                        var optionValueIds = value.Value.ToString().Split(',').ToList();
+                        var optionValueIds = value.Value.ToString()?.Split(',').ToList();
                         value.Attribute.MultiSelectValue = new List<OptionValueReq>();
 
-                        optionValueIds.ForEach(id =>
+                        optionValueIds?.ForEach(id =>
                         {
                             var optionValueId = Convert.ToInt32(id);
                             if (optionValueDictionary.ContainsKey(optionValueId))
