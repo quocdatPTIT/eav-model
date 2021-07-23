@@ -224,7 +224,7 @@ namespace DynamicField.Tickets
                 // ---------------------------------------------------
                 // Mapping value from database
                 const string getTicketsSql = @"
-                    SELECT Id, TenantId, Title, Status, CreationTime FROM Tickets WHERE Id IN @ticketIds
+                    SELECT Id, TenantId, Title, Status, CreationTime FROM Tickets WHERE Id IN @ticketIds ORDER BY Id DESC
                     SELECT Id, TicketId, Value, AttributeId FROM TicketDateTimeValues WHERE TicketId IN @ticketIds
                     SELECT Id, TicketId, Value, AttributeId FROM TicketVarcharValues WHERE TicketId IN @ticketIds
                     SELECT Id, TicketId, Value, AttributeId FROM TicketTextValues WHERE TicketId IN @ticketIds
