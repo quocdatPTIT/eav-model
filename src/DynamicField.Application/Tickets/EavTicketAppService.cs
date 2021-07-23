@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Threading.Tasks;
 using Abp.Domain.Repositories;
 using Abp.EntityFrameworkCore.Uow;
@@ -12,7 +10,6 @@ using DynamicField.EntityFrameworkCore;
 using DynamicField.ExtentionMethods;
 using DynamicField.Tickets.Models.Request;
 using DynamicField.Tickets.Models.Response;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 
@@ -25,21 +22,18 @@ namespace DynamicField.Tickets
         private readonly IRepository<EavAttribute> _eavAttributeRepository;
         private readonly IRepository<EavEntityType> _eavEntityTypeRepository;
         private readonly IRepository<EavAttributeOption> _eavAttributeOptionRepository;
-        private readonly IRepository<EavAttributeOptionValue> _eavAttributeOptionValueRepository;
 
         public EavTicketAppService(
             IConfiguration configuration,
             IObjectMapper objectMapper,
             IRepository<EavAttribute> eavAttributeRepository,
             IRepository<EavEntityType> eavEntityTypeRepository,
-            IRepository<EavAttributeOption> eavAttributeOptionRepository,
-            IRepository<EavAttributeOptionValue> eavAttributeOptionValueRepository)
+            IRepository<EavAttributeOption> eavAttributeOptionRepository)
         {
             _objectMapper = objectMapper;
             _eavAttributeRepository = eavAttributeRepository;
             _eavEntityTypeRepository = eavEntityTypeRepository;
             _eavAttributeOptionRepository = eavAttributeOptionRepository;
-            _eavAttributeOptionValueRepository = eavAttributeOptionValueRepository;
             _connectionString = configuration.GetValue<string>("ConnectionStrings:Default");
         }
 
@@ -58,18 +52,19 @@ namespace DynamicField.Tickets
             var newAttribute = _objectMapper.Map<EavAttribute>(res);
             newAttribute.EavEntityTypeId = entityTypeFromRepo.Id;
             newAttribute.EavEntityType = entityTypeFromRepo;
+            newAttribute.AttributeCode = newAttribute.FrontEndLabel.RemoveUnicode();
 
             var attributeId = await _eavAttributeRepository.InsertAndGetIdAsync(newAttribute);
 
             // Add options
             if (!optionTypes.Contains(res.BackendType)) return await Task.FromResult(true);
             
-            var option = new EavAttributeOption {AttributeId = attributeId, SortOrder = res.Option.SortOrder};
+            var option = new EavAttributeOption {AttributeId = attributeId, SortOrder = res.Option?.SortOrder};
             var optionId = await _eavAttributeOptionRepository.InsertAndGetIdAsync(option);
 
             var optionValues = new List<EavAttributeOptionValue>();
             
-            res.Option.OptionValues.ForEach(item =>
+            res.Option?.OptionValues.ForEach(item =>
             {
                 optionValues.Add(new EavAttributeOptionValue
                 {

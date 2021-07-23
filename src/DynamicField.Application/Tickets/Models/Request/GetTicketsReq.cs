@@ -21,6 +21,7 @@ namespace DynamicField.Tickets.Models.Request
 
     public class FilterValues<T>
     {
+        [RegularExpression("|DROPDOWN|MULTISELECT")]
         public string OptionType { get; set; }
         
         [Required]
@@ -32,7 +33,11 @@ namespace DynamicField.Tickets.Models.Request
 
     public class TicketFilter<T>
     {
+        [Required]
+        [RegularExpression("Text|Varchar|DateTime|Decimal|Int")]
         public string BackendType { get; set; }
+        
+        [Required]
         public List<FilterValues<T>> Filters { get; set; }
     }
 }

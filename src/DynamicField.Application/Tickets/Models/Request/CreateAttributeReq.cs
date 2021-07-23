@@ -10,9 +10,7 @@ namespace DynamicField.Tickets.Models.Request
     public class CreateAttributeReq
     {
         [Required]
-        public string AttributeCode { get; set; }
-        
-        [Required]
+        [RegularExpression("TEXT|VARCHAR|DATETIME|DECIMAL|INT|DROPDOWN|MULTISELECT")]
         public string BackendType { get; set; }
         
         [Required]
